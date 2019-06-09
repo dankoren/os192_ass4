@@ -549,6 +549,7 @@ dirlookup(struct inode *dp, char *name, uint *poff)
       if (ip->valid == 0 && dp->type == T_DEV && devsw[dp->major].iread) {
         devsw[dp->major].iread(dp, ip);
       }
+      //cprintf("inode minor is: %d, inum: %d\n",ip->minor,ip->inum);
       return ip;
     }
   }

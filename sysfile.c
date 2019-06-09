@@ -260,11 +260,23 @@ create(char *path, short type, short major, short minor)
 
   if((ip = ialloc(dp->dev, type)) == 0)
     panic("create: ialloc");
-
+    
   ilock(ip);
   ip->major = major;
   ip->minor = minor;
   ip->nlink = 1;
+  //cprintf("inode No. %d, Major: %d\n",ip->inum,ip->major);
+  if(ip->major == PROCFS){
+   ip->size = 3*sizeof(struct dirent);
+
+    /*struct dirent* dideinfo = malloc(sizeof(struct dirent));
+    struct inode* iideinfo = ialloc(ip->dev,type);
+    safestrcpy(dideinfo->name, "ideinfo", sizeof(dideinfo->name));
+    dideinfo->inum = iideinfo->inum;
+    ip->addrs[0] = dideinfo;*/
+
+
+  }
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -364,6 +376,7 @@ sys_mknod(void)
     end_op();
     return -1;
   }
+  //cprintf("inode created!, inode path: %s, size: %d\n",path,ip->size);
   iunlockput(ip);
   end_op();
   return 0;
