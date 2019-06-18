@@ -267,15 +267,7 @@ create(char *path, short type, short major, short minor)
   ip->nlink = 1;
   //cprintf("inode No. %d, Major: %d\n",ip->inum,ip->major);
   if(ip->major == PROCFS){
-   ip->size = 3*sizeof(struct dirent);
-
-    /*struct dirent* dideinfo = malloc(sizeof(struct dirent));
-    struct inode* iideinfo = ialloc(ip->dev,type);
-    safestrcpy(dideinfo->name, "ideinfo", sizeof(dideinfo->name));
-    dideinfo->inum = iideinfo->inum;
-    ip->addrs[0] = dideinfo;*/
-
-
+   ip->size = 7*sizeof(struct dirent);
   }
   iupdate(ip);
 
@@ -395,7 +387,7 @@ sys_chdir(void)
     return -1;
   }
   ilock(ip);
-  if(ip->type != T_DIR){
+  if(ip->type != T_DIR && ip->major != PROCFS){
     iunlockput(ip);
     end_op();
     return -1;

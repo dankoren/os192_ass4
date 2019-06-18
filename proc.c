@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+//#include "file.h"
+//#include "fs.h"
 
 struct {
   struct spinlock lock;
@@ -75,7 +77,8 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
-
+ // struct inode* proc_device;
+  
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -88,6 +91,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  //proc_device = namei("/proc");
+  //proc_device->size += sizeof(struct dirent);
+
 
   release(&ptable.lock);
 
@@ -199,6 +205,11 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  if(np->pid > 2){
+    struct inode* ip = namei("/proc");
+    grow_inode_size(ip);
+  }
+
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -530,5 +541,63 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
+  }
+}
+
+
+
+
+int get_pid_by_index(int index){
+  if(ptable.proc[index].state != UNUSED){
+    return ptable.proc[index].pid;
+  }
+  else{
+    return 0;
+  }
+  
+ /*  int i;
+  struct proc* p = 0;
+  acquire(&ptable.lock);
+  for(i = 0; i < NPROC; i++){
+    if(ptable.proc[i].pid == pid && ptable.proc[i].state != UNUSED){
+      p =  &ptable.proc[i];
+    }
+  }
+  release(&ptable.lock);
+  return p;*/
+}
+
+char* get_name_by_index(int index){
+  if(ptable.proc[index].state != UNUSED){
+    return ptable.proc[index].name;
+  }
+  else{
+    return 0;
+  }
+}
+
+char* get_state_name_by_index(int index){
+  static char *states[] = {
+    [UNUSED]    "unused",
+    [EMBRYO]    "embryo",
+    [SLEEPING]  "sleep ",
+    [RUNNABLE]  "runble",
+    [RUNNING]   "run   ",
+    [ZOMBIE]    "zombie"
+    };
+  if(ptable.proc[index].state != UNUSED){
+    return states[ptable.proc[index].state];
+  }
+  else{
+    return 0;
+  }
+}
+
+uint get_size_by_index(int index){
+  if(ptable.proc[index].state != UNUSED){
+    return ptable.proc[index].sz;
+  }
+  else{
+    return 0;
   }
 }

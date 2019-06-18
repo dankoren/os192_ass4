@@ -155,6 +155,6 @@ filewrite(struct file *f, char *addr, int n)
 }
 
 
-int getFds(){
-  return 20;
+struct file * get_ftable(){
+  return ftable.file;
 }

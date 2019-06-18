@@ -1,107 +1,8 @@
 #include "types.h"
-#include "x86.h"
+#include "stat.h"
+#include "user.h"
+#include "fs.h"
 
-void*
-memset(void *dst, int c, uint n)
-{
-  if ((int)dst%4 == 0 && n%4 == 0){
-    c &= 0xFF;
-    stosl(dst, (c<<24)|(c<<16)|(c<<8)|c, n/4);
-  } else
-    stosb(dst, c, n);
-  return dst;
-}
-
-int
-memcmp(const void *v1, const void *v2, uint n)
-{
-  const uchar *s1, *s2;
-
-  s1 = v1;
-  s2 = v2;
-  while(n-- > 0){
-    if(*s1 != *s2)
-      return *s1 - *s2;
-    s1++, s2++;
-  }
-
-  return 0;
-}
-
-void*
-memmove(void *dst, const void *src, uint n)
-{
-  const char *s;
-  char *d;
-
-  s = src;
-  d = dst;
-  if(s < d && s + n > d){
-    s += n;
-    d += n;
-    while(n-- > 0)
-      *--d = *--s;
-  } else
-    while(n-- > 0)
-      *d++ = *s++;
-
-  return dst;
-}
-
-// memcpy exists to placate GCC.  Use memmove.
-void*
-memcpy(void *dst, const void *src, uint n)
-{
-  return memmove(dst, src, n);
-}
-
-int
-strncmp(const char *p, const char *q, uint n)
-{
-  while(n > 0 && *p && *p == *q)
-    n--, p++, q++;
-  if(n == 0)
-    return 0;
-  return (uchar)*p - (uchar)*q;
-}
-
-char*
-strncpy(char *s, const char *t, int n)
-{
-  char *os;
-
-  os = s;
-  while(n-- > 0 && (*s++ = *t++) != 0)
-    ;
-  while(n-- > 0)
-    *s++ = 0;
-  return os;
-}
-
-// Like strncpy but guaranteed to NUL-terminate.
-char*
-safestrcpy(char *s, const char *t, int n)
-{
-  char *os;
-
-  os = s;
-  if(n <= 0)
-    return os;
-  while(--n > 0 && (*s++ = *t++) != 0)
-    ;
-  *s = 0;
-  return os;
-}
-
-int
-strlen(const char *s)
-{
-  int n;
-
-  for(n = 0; s[n]; n++)
-    ;
-  return n;
-}
 
 
 /**************************SPRINTF********************************/
@@ -188,4 +89,60 @@ sprintf(char* buff, const char *fmt, ...)
     }
   }
 }
+/**********************************************************************/
 
+
+void print_formatted_inode_info(char* text){
+    char *semicolon;
+    char *newline;
+    char buf[100];
+    semicolon = text;
+    int index = 0;
+    while ((semicolon = strchr(semicolon, ':'))) {
+        semicolon += 2;
+        newline = strchr(semicolon, '\n');
+        memmove(buf, semicolon, newline - semicolon);
+        buf[newline - semicolon] = 0;
+        if(index == 4) 
+          printf(1, "(");
+        printf(1, buf);
+        if(index == 4) 
+          printf(1, ")");
+        printf(1, " ");
+        index++;
+    }
+    printf(1, "\n");
+}
+
+
+
+int main() {
+    int fd, inodeinfo_fd;
+    char text_to_print[512], filename[50];
+    struct dirent dir_entry;
+    printf(1,"Starting lsnd...\n");
+    if ((inodeinfo_fd = open("/proc/inodeinfo", 0)) < 0) {
+        printf(1, "error in opening inodeinfo!\n");
+        exit();
+    }
+    read(inodeinfo_fd, &dir_entry, sizeof(dir_entry)); // reading: .
+    read(inodeinfo_fd, &dir_entry, sizeof(dir_entry)); // reading: ..
+
+    while (read(inodeinfo_fd, &dir_entry, sizeof(dir_entry)) == sizeof(dir_entry)) {
+      if(dir_entry.inum != 0){
+        sprintf(filename, "/proc/inodeinfo/%s", dir_entry.name);
+        fd = open(filename,0);
+        if(fd >= 0){
+          if (read(fd, text_to_print, 512) <= 0) {
+              printf(2, "error in reading inode file!\n");
+              exit();
+          }
+          print_formatted_inode_info(text_to_print);
+          close(fd);
+        }
+      }
+    }
+    close(inodeinfo_fd);
+    printf(1,"lsnd finished!\n");
+    exit();
+}

@@ -34,6 +34,7 @@ ls(char *path)
     printf(2, "ls: cannot open %s\n", path);
     return;
   }
+  printf(1,"fd:%d\n",fd);
 
   if(fstat(fd, &st) < 0){
     printf(2, "ls: cannot stat %s\n", path);
@@ -47,6 +48,7 @@ ls(char *path)
     break;
 
   case T_DIR:
+  case T_DEV:
     if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
       printf(1, "ls: path too long\n");
       break;

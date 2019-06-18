@@ -455,10 +455,11 @@ readi(struct inode *ip, char *dst, uint off, uint n)
 {
   uint tot, m;
   struct buf *bp;
-
+  //cprintf("readi with %d, type: %d\n",ip->inum, ip->type);
   if(ip->type == T_DEV){
-    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
+    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read){
       return -1;
+    }
     return devsw[ip->major].read(ip, dst, off, n);
   }
 
@@ -532,8 +533,8 @@ dirlookup(struct inode *dp, char *name, uint *poff)
   if(dp->type != T_DIR && !IS_DEV_DIR(dp))
     panic("dirlookup not DIR");
 
-  for(off = 0; off < dp->size; off += sizeof(de)){
-    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de)) {
+  for(off = 0; off < dp->size || dp->type == T_DEV; off += sizeof(de)){
+    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de)){
       if (dp->type == T_DEV)
         return 0;
       panic("dirlookup read");
@@ -541,6 +542,7 @@ dirlookup(struct inode *dp, char *name, uint *poff)
     if(de.inum == 0)
       continue;
     if(namecmp(name, de.name) == 0){
+          //cprintf("found match! %s\n", name);
       // entry matches path element
       if(poff)
         *poff = off;
@@ -572,9 +574,12 @@ dirlink(struct inode *dp, char *name, uint inum)
   }
 
   // Look for an empty dirent.
-  for(off = 0; off < dp->size; off += sizeof(de)){
-    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
+  for(off = 0; off < dp->size || dp->type == T_DEV ; off += sizeof(de)){
+    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de)){
+      if (dp->type == T_DEV)
+        return 0;
       panic("dirlink read");
+    }
     if(de.inum == 0)
       break;
   }
@@ -677,4 +682,43 @@ struct inode*
 nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
+}
+
+struct inode* get_icache(){
+  return icache.inode;
+}
+
+int grow_inode_size(struct inode* ip){
+  ip->size += sizeof(struct dirent);
+  return ip->size;
+}
+
+int 
+find_inode_index_in_icache(int inode_num){
+  int i;
+  for (i = 0; i < NINODE; i++){
+    if(icache.inode[i].type != 0){
+      if (inode_num == 0){
+          return i;
+      } else {
+          inode_num--;
+      }
+    }
+  }
+  return -1;
+}
+
+struct inode* 
+find_inode_in_icache(int inode_num){
+  int i;
+  for (i = 0; i < NINODE; i++){
+    if(icache.inode[i].type != 0){
+      if (inode_num == 0){
+          return &icache.inode[i];
+      } else {
+          inode_num--;
+      }
+    }
+  }
+  return 0;
 }

@@ -166,3 +166,7 @@ iderw(struct buf *b)
 
   release(&idelock);
 }
+
+struct buf* get_idequeue(){
+  return idequeue;
+}
